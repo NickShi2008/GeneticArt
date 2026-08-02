@@ -12,10 +12,10 @@ namespace GeneticArt
         public static int PointChangeChance = 50;
 
         //color change chances
-        public static int RedChance = 25;
-        public static int GreenChance = 25;
-        public static int BlueChance = 25;
-        public static int AlphaChance = 25;
+        public static int RedChance = 27;
+        public static int GreenChance = 27;
+        public static int BlueChance = 27;
+        public static int AlphaChance = 19;
 
         public static int ColorAddChance = 50;
         public static int ColorSubChance = 50;
@@ -28,23 +28,23 @@ namespace GeneticArt
         public static int PointYChance = 50;
 
 
-        public static int ColorChangeAmount = 10;
-        public static int PointChangeAmount = 10;
+        public static int ColorChangeAmount = 40;
+        public static float PointChangeAmount = 0.1f;
 
 
         //Alpha constraints
-        public static int AlphaMin = 24;
-        public static int AlphaMax = 232;
+        public static int AlphaMin = 30;
+        public static int AlphaMax = 185;
 
         //Point constraints
-        public static int PointXMin = 0;
-        public static int PointXMax = 1;
-        public static int PointYMin = 0;
-        public static int PointYMax = 1;
+        public static float PointXMin = 0.2f;
+        public static float PointXMax = 0.8f;
+        public static float PointYMin = 0.2f;
+        public static float PointYMax = 0.8f;
 
         //Triangle constraints
-        public static int AddChance = 25;
-        public static int RemoveChance = 25;
-        public static int MutateChance = 50;
+        public static int AddChance = 20;
+        public static int RemoveChance = 10;
+        public static int MutateChance = 70;
     }
 }

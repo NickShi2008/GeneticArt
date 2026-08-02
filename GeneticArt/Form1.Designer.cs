@@ -36,19 +36,21 @@
             // picture
             // 
             picture.Image = (Image)resources.GetObject("picture.Image");
-            picture.Location = new Point(384, 93);
+            picture.Location = new Point(953, 178);
+            picture.Margin = new Padding(4, 5, 4, 5);
             picture.Name = "picture";
-            picture.Size = new Size(540, 587);
+            picture.Size = new Size(750, 570);
             picture.TabIndex = 0;
             picture.TabStop = false;
             picture.Click += picture_Click;
             // 
             // screen
             // 
-            AutoScaleDimensions = new SizeF(7F, 15F);
+            AutoScaleDimensions = new SizeF(10F, 25F);
             AutoScaleMode = AutoScaleMode.Font;
-            ClientSize = new Size(1504, 781);
+            ClientSize = new Size(2334, 1516);
             Controls.Add(picture);
+            Margin = new Padding(4, 5, 4, 5);
             Name = "screen";
             Text = "Form1";
             Load += screen_Load;

@@ -6,9 +6,9 @@ using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace GeneticArt
 {
-    public class GeneticArtTrainer
+    public class GeneticArtTrainerMod
     {
-        public TriangleArt[] population;
+        public TriangleArtMod[] population;
         double bestError = double.MaxValue;
 
         Rectangle rect;
@@ -16,13 +16,13 @@ namespace GeneticArt
 
         bool hasRanOnce = false;
 
-        public GeneticArtTrainer(Image originalImage, int maxTriangles, int populationSize, Random random)
+        public GeneticArtTrainerMod(Image originalImage, int maxTriangles, int populationSize, Random random)
         {
             Bitmap bp = new Bitmap(originalImage);
-            population = new TriangleArt[populationSize];
+            population = new TriangleArtMod[populationSize];
             for(int i = 0; i < populationSize; i++)
             {
-                population[i] = new TriangleArt(maxTriangles, bp, random);
+                population[i] = new TriangleArtMod(maxTriangles, bp, random);
             }
             ;
             rect = new Rectangle(0, 0, originalImage.Width, originalImage.Height);
@@ -54,6 +54,7 @@ namespace GeneticArt
             }
         }
 
+        //errror same across all?
         public double Train(Random random)
         {
             int bestIndex = 0;
@@ -63,7 +64,7 @@ namespace GeneticArt
             {
                 population[0].CopyTo(population[i]);
                 population[i].Mutate(random);
-                double error = population[i].GetError(sourcePixels);
+                double error = hasRanOnce ? population[i].GetErrorTest(sourcePixels) : population[i].GetError(sourcePixels);
                 if (error < bestError)
                 {
                     bestError = error;
@@ -71,7 +72,8 @@ namespace GeneticArt
 
                 }
             }
-            TriangleArt temp = population[0];
+            hasRanOnce = true;
+            TriangleArtMod temp = population[0];
             population[0] = population[bestIndex];
             population[bestIndex] = temp;
 
@@ -111,6 +113,5 @@ namespace GeneticArt
         {
             return population[0].DrawImage();
         }
-
     }
 }

@@ -5,115 +5,143 @@ using System.Text;
 
 namespace GeneticArt
 {
-    public class TriangleArt
+
+    public class TriangleArt : IDisposable
     {
         int maxTriangles;
-        List<Triangle> triangles;
-        Bitmap originalImage;
+        public List<Triangle> triangles;
+
+        private Bitmap bp;
         
-        public TriangleArt(int maxTriangles, Bitmap bitmap)
+        private Graphics graphics;
+
+        //still need to draw only inside image area and then recompute error in 2d array int of errors
+        //recompute total error
+        //try to avoid using opy to if expensive
+        
+        public TriangleArt(int maxTriangles, Bitmap bitmap, Random random)
         {
-            originalImage = bitmap;
+            //this.bitmap = bitmap;
+            bp = new Bitmap(bitmap.Width, bitmap.Height, PixelFormat.Format32bppArgb);
+            graphics = Graphics.FromImage(bp);
+           
+
             this.maxTriangles = maxTriangles;
             triangles = new List<Triangle>();
-            for (int i = 0; i < maxTriangles; i++)
-            {
-                triangles.Add(Triangle.RandomTriangle(new Random()));
-            }
+
+
+
+            //for (int i = 0; i < maxTriangles; i++)
+            //{
+            //    triangles.Add(Triangle.RandomTriangle(random));
+            //}
+
         }
 
+        public void Dispose()
+        {
+            graphics.Dispose();
+            bp.Dispose();
+
+        }
+
+        
         public void Mutate(Random random)
         {
-            int removeAddOrmutate = new Random().Next(TriangleArtConstants.AddChance 
+            int removeAddOrmutate = random.Next(TriangleArtConstants.AddChance 
                 + TriangleArtConstants.RemoveChance + TriangleArtConstants.MutateChance);
+            int index = 0;
 
-            if(removeAddOrmutate < TriangleArtConstants.AddChance || triangles.Capacity == 0)
+            if(removeAddOrmutate < TriangleArtConstants.AddChance || triangles.Count == 0)
             {
-                if (triangles.Capacity >= maxTriangles)
-                    triangles.Remove(triangles.First());
+                if (triangles.Count >= maxTriangles)
+                {
+                    triangles.RemoveAt(0);
+                }
                 triangles.Add(Triangle.RandomTriangle(random));
+                index = triangles.Count - 1;
+                
             }
             else if (removeAddOrmutate < TriangleArtConstants.AddChance + TriangleArtConstants.RemoveChance)
             {
-                triangles.RemoveAt(random.Next(triangles.Count));
+                index = random.Next(triangles.Count);
+
+                triangles.RemoveAt(index);
+                if (index == triangles.Count && triangles.Count != 1) index--;
+                else if (index == 0) ;
+
             }
             else
             {
-                triangles[random.Next(triangles.Count)].Mutate(random);
+                index = random.Next(triangles.Count);
+
+                triangles[index].Mutate(random);
             }
+
         }
 
-        public Bitmap DrawImage(int width, int height)
+        public Bitmap DrawImage()
         {
-            Bitmap newBP = new Bitmap(width, height);
 
-            int xCoef = width;
-            int yCoef = height;
+            int xCoef = bp.Width;
+            int yCoef = bp.Height;
 
-            Graphics graphics = Graphics.FromImage(newBP);
+            graphics.Clear(Color.White);
 
-            for(int i = 0; i < triangles.Count; i++)
+            for (int i = 0; i < triangles.Count; i++)
             {
                 triangles[i].DrawTriangle(graphics, xCoef, yCoef);
             }
-
-            return newBP;
+            return bp;
         }
 
-        public double GetError()
+        public double GetError(Pixel[] sourcePixels)
         {
-            double totalError = 0;
-            unsafe
+            long totalError = 0;
+            int width = bp.Width;
+            int height = bp.Height;
+            bp = DrawImage();
+
+            Rectangle rect;
+            rect = new Rectangle(0, 0, width, height);
+
+            BitmapData newBPData = bp.LockBits(rect, ImageLockMode.ReadOnly, PixelFormat.Format32bppArgb);
+            unchecked
             {
-                Bitmap newBP = DrawImage(originalImage.Width, originalImage.Height);
-
-                Rectangle rect = new Rectangle(0, 0, originalImage.Width, originalImage.Height);
-
-                BitmapData newBPData = newBP.LockBits(rect, ImageLockMode.ReadOnly, PixelFormat.Format32bppArgb);
-                BitmapData originalBPData = originalImage.LockBits(rect, ImageLockMode.ReadOnly, PixelFormat.Format32bppArgb);
-
-                try
+                unsafe
                 {
-                    byte* newBPPtr = (byte*)newBPData.Scan0;
-                    int stride = newBPData.Stride;
-
-                    byte* bpp = (byte*)newBPData.Scan0;
 
 
-                    for (int y = 0; y < newBP.Height; y++)
+                    //BitmapData originalBPData = originalImage.LockBits(rect, ImageLockMode.ReadOnly, PixelFormat.Format32bppArgb);
+                    fixed (Pixel* psourcePixels = sourcePixels) 
                     {
-                        byte* row = (y * stride) + newBPPtr;
-                        byte* originRow = (y * stride) + bpp;
+                        Pixel* p1 = (Pixel*)newBPData.Scan0.ToPointer();
+                        Pixel* p2 = psourcePixels;
 
-                        for (int x = 0; x < newBP.Width; x++)
+                        for (int i = rect.Left; i < rect.Height * rect.Width; i++)
                         {
-                            byte* pixel = row + (x * 4);
+                            int r = p1->R - p2->R;
+                            int g = p1->G - p2->G;
+                            int b = p1->B - p2->B;
+                            int a = p1->A - p2->A;
 
-                            int b = pixel[0];
-                            int g = pixel[1];
-                            int r = pixel[2];
-                            int a = pixel[3];
-
-                            byte* originPixel = originRow + (x * 4);
-                            int originB = originPixel[0];
-                            int originG = originPixel[1];
-                            int originR = originPixel[2];
-                            int originA = originPixel[3];
-
-                            double error = Math.Pow(Math.Abs(b - originB),2) + Math.Pow(Math.Abs(g - originG), 2)
-                                + Math.Pow(Math.Abs(r - originR),2) + Math.Pow(Math.Abs(a - originA), 2);
-                            totalError += error;
+                            totalError += r * r + g * g + b * b + a * a;
+                            p1++;
+                            p2++;
+                            //if(i > rect.Width)
+                            //{
+                            //    p1 += 
+                            //}
                         }
+
                     }
-                }
-                finally
-                {
-                    newBP.UnlockBits(newBPData);
-                    originalImage.UnlockBits(originalBPData);
+                   
                 }
             }
+            bp.UnlockBits(newBPData);
+            double newError = totalError / (height * width);
+            return newError;
 
-            return totalError/(originalImage.Height * originalImage.Width);
         }
 
         public void CopyTo(TriangleArt triangleArt)
