@@ -28,6 +28,17 @@ namespace GeneticArt
         double currentError = double.MaxValue;
         long totalError = 0;
 
+        bool hasRemoved = false;
+
+        enum MutationType
+        {
+            Add,
+            Remove,
+            Mutate
+        }
+
+        MutationType change;
+
         int lastSearchedIndex;
 
         int width => bp.Width;
@@ -75,14 +86,16 @@ namespace GeneticArt
             int removeAddOrmutate = random.Next(TriangleArtConstants.AddChance 
                 + TriangleArtConstants.RemoveChance + TriangleArtConstants.MutateChance);
             int index = 0;
-
+            hasRemoved = false;
             if(removeAddOrmutate < TriangleArtConstants.AddChance || triangles.Count == 0)
             {
                 Rectangle OldBox = Rectangle.Empty;
                 if (triangles.Count >= maxTriangles)
                 {
                     OldBox = triangles[0].GetBoundingBox(width, height);
+                    previousTriangle = triangles[0];
                     triangles.RemoveAt(0);
+                    hasRemoved = true;
                 }
                 triangles.Add(Triangle.RandomTriangle(random));
                 Rectangle NewBox = triangles[triangles.Count - 1].GetBoundingBox(width, height);
@@ -96,7 +109,7 @@ namespace GeneticArt
                 }
 
                 index = triangles.Count - 1;
-                
+                change = MutationType.Add;
             }
             else if (removeAddOrmutate < TriangleArtConstants.AddChance + TriangleArtConstants.RemoveChance)
             {
@@ -104,6 +117,7 @@ namespace GeneticArt
                 BoxToSearch = triangles[index].GetBoundingBox(width, height);
                 previousTriangle = triangles[index];
                 triangles.RemoveAt(index);
+                change = MutationType.Remove;
             }
             else
             {
@@ -115,19 +129,20 @@ namespace GeneticArt
                 Rectangle after = triangles[index].GetBoundingBox(width, height);
 
                 BoxToSearch = Rectangle.Union(before, after);
+                change = MutationType.Mutate;
             }
             lastSearchedIndex = index;
 
             BoxToSearch = Rectangle.Intersect(BoxToSearch, new Rectangle(0, 0, width, height));
         }
 
-        public Bitmap DrawImageSmall()
+        public void DrawImageSmall()
         {
            
             int xCoef = bp.Width;
             int yCoef = bp.Height;
 
-            graphics = Graphics.FromImage(bp);
+            
             graphics.SetClip(BoxToSearch);
             graphics.Clear(Color.White);
 
@@ -140,7 +155,8 @@ namespace GeneticArt
                 }
             }
 
-            return bp;
+            graphics.ResetClip();
+
         }
 
         public Bitmap DrawImage()
@@ -158,9 +174,9 @@ namespace GeneticArt
             return bp;
         }
 
-        public double GetError(Pixel[] sourcePixels)
+        public void StartError(Pixel[] sourcePixels)
         {
-            totalError = 0;
+            //totalError = 0;
             int width = bp.Width;
             int height = bp.Height;
             bp = DrawImage();
@@ -181,14 +197,14 @@ namespace GeneticArt
                         Pixel* p1 = (Pixel*)newBPData.Scan0.ToPointer();
                         Pixel* p2 = psourcePixels;
 
-                        for (int i = rect.Left; i < rect.Height * rect.Width; i++)
+                        for (int i = 0; i < sourcePixels.Length; i++)
                         {
                             int r = p1->R - p2->R;
                             int g = p1->G - p2->G;
                             int b = p1->B - p2->B;
                             int a = p1->A - p2->A;
 
-                            pixelErrors[i] += r * r + g * g + b * b + a * a;
+                            pixelErrors[i] = r * r + g * g + b * b + a * a;
                             totalError += pixelErrors[i];
                             p1++;
                             p2++;
@@ -203,29 +219,91 @@ namespace GeneticArt
                 }
             }
             bp.UnlockBits(newBPData);
-            double newError = (double) (pixelErrors.Sum() / (height * width));
-            if (newError < currentError)
-            {
-                currentError = newError;
-                oldBp = (Bitmap)bp.Clone();
-            }
-            return currentError;
+            currentError = (double)totalError;
 
         }
-        public double GetErrorTest(Pixel[] sourcePixels)
+        public double GetError(Pixel[] sourcePixels)
         {
-            if(BoxToSearch.IsEmpty) return GetError(sourcePixels);
-            long totalError = 0;
+            if(BoxToSearch.Width == 0 || BoxToSearch.Height == 0)
+            {
+                return currentError;
+            }
+            //long totalError = 0;
             int width = bp.Width;
             int height = bp.Height;
-            bp = DrawImageSmall();
+            DrawImageSmall();
 
             Rectangle rect;
 
 
 
             rect = BoxToSearch;
-            double newError;
+            BitmapData newBPData = bp.LockBits(rect, ImageLockMode.ReadOnly, PixelFormat.Format32bppArgb);
+
+            unchecked
+            {
+                unsafe
+                {
+                    
+                    //gotta be something here because the error is completely wack, the error difference shouldn't be this large I don't think?
+
+                    //BitmapData originalBPData = originalImage.LockBits(rect, ImageLockMode.ReadOnly, PixelFormat.Format32bppArgb);
+                    fixed (Pixel* psourcePixels = sourcePixels)
+                    {
+                        //Pixel* p1 = (Pixel*)newBPData.Scan0.ToPointer();
+
+                        //Pixel* p2 = psourcePixels + rect.Y * width + rect.X;
+                        //int count = rect.Y * rect.Width + rect.X;
+                        
+
+                        for (int y = 0; y < rect.Height; y++)
+                        {
+                            Pixel* p1 = (Pixel*)(newBPData.Scan0 + y * newBPData.Stride);
+                            //compiler automatically converts the width values * size of Pixel to move the bytes meaning since 32 bpp stride == width
+                            Pixel* p2 = psourcePixels + (rect.Y + y) * width + rect.X;
+                            int count = (rect.Y + y) * width + rect.X;
+                            for (int x = 0; x < rect.Width; x++)
+                            {
+                                int r = p1->R - p2->R;
+                                int g = p1->G - p2->G;
+                                int b = p1->B - p2->B;
+                                int a = p1->A - p2->A;
+                                int error = r * r + g * g + b * b + a * a;
+                                totalError += error - pixelErrors[count];
+                                pixelErrors[count] = error;
+                                p1++;
+                                p2++;
+                                count++;
+                            }
+                            //basically since array, think about subtracting total pixels in a row mby the width of rect giving amount to skip over
+                            //4byte so no padding 
+                            //count += width - rect.Width;
+                            //p1 += width - rect.Width;
+                            //p2 += width - rect.Width;
+                        }
+
+                    }
+
+                }
+            }
+            bp.UnlockBits(newBPData);
+
+            return totalError;
+
+        }
+
+        //works as whole here to compare difference
+        //most likely draw but 
+        public double GetErrorWorking(Pixel[] sourcePixels)
+        {
+            //totalError = 0;
+            int width = bp.Width;
+            int height = bp.Height;
+            bp = DrawImage();
+
+            Rectangle rect;
+            rect = new Rectangle(0, 0, width, height);
+
             BitmapData newBPData = bp.LockBits(rect, ImageLockMode.ReadOnly, PixelFormat.Format32bppArgb);
             unchecked
             {
@@ -236,8 +314,9 @@ namespace GeneticArt
                     //BitmapData originalBPData = originalImage.LockBits(rect, ImageLockMode.ReadOnly, PixelFormat.Format32bppArgb);
                     fixed (Pixel* psourcePixels = sourcePixels)
                     {
-                        Pixel* p1 = (Pixel*) newBPData.Scan0;
-                        Pixel* p2 = psourcePixels + rect.Y * width + rect.X;
+                        Pixel* p1 = (Pixel*)newBPData.Scan0.ToPointer();
+                        Pixel* p2 = psourcePixels;
+
                         int count = rect.Left;
                         for (int y = 0; y < rect.Height; y++)
                         {
@@ -247,10 +326,12 @@ namespace GeneticArt
                                 int g = p1->G - p2->G;
                                 int b = p1->B - p2->B;
                                 int a = p1->A - p2->A;
-
-                                pixelErrors[count] = r * r + g * g + b * b + a * a;
+                                int error = r * r + g * g + b * b + a * a;
+                                totalError += error - pixelErrors[count];
+                                pixelErrors[count] = error;
                                 p1++;
                                 p2++;
+                                count++;
                             }
                             //basically since array, think about subtracting total pixels in a row mby the width of rect giving amount to skip over
                             //4byte so no padding 
@@ -262,32 +343,43 @@ namespace GeneticArt
                     }
 
                 }
-                newError = pixelErrors.Sum() / (height * width);
             }
             bp.UnlockBits(newBPData);
-
-            if (newError < currentError)
-            {
-                currentError = newError;
-                oldBp = (Bitmap)bp.Clone();
-            }
-            return currentError;
-
+            //currentError = (double)totalError;
+            return totalError;
         }
 
-
-
-
-
-
-        public void CopyTo(TriangleArtMod triangleArt)
+        void Undo()
         {
-            triangleArt.triangles.Clear();
-            for(int i = 0; i < triangles.Count; i++)
+            switch (change)
             {
-                triangleArt.triangles.Add(triangles[i].Copy());
+                case MutationType.Add:
+                    triangles.RemoveAt(lastSearchedIndex);
+                    if (hasRemoved) triangles.Insert(0, previousTriangle);
+                    break;
+                case MutationType.Remove:
+                    triangles.Insert(lastSearchedIndex, previousTriangle);
+                    break;
+                case MutationType.Mutate:
+                    triangles[lastSearchedIndex] = previousTriangle;
+                    break;
             }
-            triangleArt.currentError = this.currentError;
+        }
+
+        public double ErrorFunction(Pixel[] sourcePixels)
+        {
+            double error = GetError(sourcePixels);
+
+            if (error < currentError)
+            {
+                currentError = error;
+                return error;
+            }
+
+            Undo();
+            //DrawImageSmall();
+            GetError(sourcePixels);
+            return currentError;
         }
 
     }

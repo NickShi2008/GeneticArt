@@ -6,27 +6,28 @@ using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace GeneticArt
 {
-    public class GeneticArtTrainerMod
+    public class ArtTrainer
     {
-        public TriangleArtMod[] population;
-        double bestError = double.MaxValue;
-
+        //public TriangleArtMod[] population;
+        public TriangleArtMod art;
         Rectangle rect;
         Pixel[] sourcePixels;
 
-        bool hasRanOnce = false;
 
-        public GeneticArtTrainerMod(Image originalImage, int maxTriangles, int populationSize, Random random)
+        public ArtTrainer(Image originalImage, int maxTriangles, Random random)
         {
             Bitmap bp = new Bitmap(originalImage);
-            population = new TriangleArtMod[populationSize];
-            for(int i = 0; i < populationSize; i++)
-            {
-                population[i] = new TriangleArtMod(maxTriangles, bp, random);
-            }
+            art = new TriangleArtMod(maxTriangles, bp, random);
+            //population = new TriangleArtMod[populationSize];
+            //for(int i = 0; i < populationSize; i++)
+            //{
+            //    population[i] = new TriangleArtMod(maxTriangles, bp, random);
+            //}
             ;
-            rect = new Rectangle(0, 0, originalImage.Width, originalImage.Height);
+            //rect = new Rectangle(0, 0, originalImage.Width, originalImage.Height);
+
             sourcePixels = BitmapToPixels(bp);
+            art.StartError(sourcePixels);
         }
 
         public Pixel[] BitmapToPixels(Bitmap bp)
@@ -54,30 +55,11 @@ namespace GeneticArt
             }
         }
 
-        //errror same across all?
         public double Train(Random random)
         {
-            int bestIndex = 0;
-            double bestError = population[0].GetError(sourcePixels);
-
-            for (int i = 1; i < population.Length; i++)
-            {
-                population[0].CopyTo(population[i]);
-                population[i].Mutate(random);
-                double error = hasRanOnce ? population[i].GetErrorTest(sourcePixels) : population[i].GetError(sourcePixels);
-                if (error < bestError)
-                {
-                    bestError = error;
-                    bestIndex = i;
-
-                }
-            }
-            hasRanOnce = true;
-            TriangleArtMod temp = population[0];
-            population[0] = population[bestIndex];
-            population[bestIndex] = temp;
-
-            return bestError;
+            art.Mutate(random);
+            double error = art.ErrorFunction(sourcePixels);
+            return error;
         }
 
         //public double TrainParallel(Random random)
@@ -111,7 +93,7 @@ namespace GeneticArt
 
         public Bitmap GetBestImage(int x, int y)
         {
-            return population[0].DrawImage();
+            return art.DrawImage();
         }
     }
 }

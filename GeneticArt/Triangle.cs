@@ -68,16 +68,30 @@ namespace GeneticArt
                 scaledPoints[i] = new PointF(points[i].X * xCoef, points[i].Y * yCoef);
             }
             using var brush = new SolidBrush(color);
-            //for(int x = (int) extremas[0].X; y < (int) extremas[1].X; x++)
-            //{
-            //    for (int y = (int)extremas[0].Y; y < (int)extremas[1].Y; y++)
-            //    {
-            //        if (BoundingBox.Contains(x, y))
-            //        {
+            for (int x = (int)extremas[0].X; x < (int)extremas[0].X; x++)
+            {
+                for (int y = (int)extremas[0].Y; y < (int)extremas[1].Y; y++)
+                {
+                    if (IsPointInTriangle(new Point(x,y), points[0], points[1], points[2]))
+                    {
                         
-            //        }
-            //    }
-            //}
+                    }
+                }
+            }
+        }
+
+        bool IsPointInTriangle(PointF p, PointF a, PointF b, PointF c)
+        {
+            float areaABC = Area(a, b, c);
+            float areaPAB = Area(p, a, b);
+            float areaPAC = Area(p, a, c);
+            float areaPBC = Area(p, b, c);
+            return Math.Abs(areaABC - (areaPAB + areaPAC + areaPBC)) < 0.0001f;
+        }
+        
+        float Area(PointF a, PointF b, PointF c)
+        {
+            return Math.Abs((a.X * (b.Y - c.Y) + b.X * (c.Y - a.Y) + c.X * (a.Y - b.Y)) / 2.0f);
         }
 
         public void Mutate(Random random)
