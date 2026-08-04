@@ -43,6 +43,7 @@
             GeneticErrorText = new Label();
             HillErrorText = new Label();
             HillIterationText = new Label();
+            ClickLabel = new Label();
             ((System.ComponentModel.ISupportInitialize)picture).BeginInit();
             ((System.ComponentModel.ISupportInitialize)geneticPicture).BeginInit();
             ((System.ComponentModel.ISupportInitialize)hillPicture).BeginInit();
@@ -179,11 +180,21 @@
             HillIterationText.TabIndex = 13;
             HillIterationText.Text = "Hill Iteration:";
             // 
+            // ClickLabel
+            // 
+            ClickLabel.AutoSize = true;
+            ClickLabel.Location = new Point(208, 642);
+            ClickLabel.Name = "ClickLabel";
+            ClickLabel.Size = new Size(296, 25);
+            ClickLabel.TabIndex = 15;
+            ClickLabel.Text = "Click Image above to put your own!";
+            // 
             // screen
             // 
             AutoScaleDimensions = new SizeF(10F, 25F);
             AutoScaleMode = AutoScaleMode.Font;
             ClientSize = new Size(1829, 1516);
+            Controls.Add(ClickLabel);
             Controls.Add(HillErrorText);
             Controls.Add(HillIterationText);
             Controls.Add(GeneticErrorText);
@@ -225,5 +236,6 @@
         private Label GeneticErrorText;
         private Label HillErrorText;
         private Label HillIterationText;
+        private Label ClickLabel;
     }
 }

@@ -20,6 +20,8 @@ namespace GeneticArt
         private readonly object geneticLock = new object();
         private readonly object hillLock = new object();
 
+        Image backUpImage;
+
 
         //before with simple lockbits popSize 30, maxTri 500, and epoch 500 time take for starry night image is 2 min 13 seconds
         //gave quite a bad image
@@ -32,13 +34,13 @@ namespace GeneticArt
         //600
         // around 4 min 30 to 5 and 140 to 150 mb
 
-        System.Threading.Thread t;
         Thread geneticThread;
         Thread hillThread;
         public screen()
         {
             InitializeComponent();
             Graphics gfx = Graphics.FromImage(picture.Image);
+            backUpImage = picture.Image;
 
             geneticRandom = new Random();
             hillRandom = new Random();
@@ -63,8 +65,33 @@ namespace GeneticArt
 
         private void picture_Click(object sender, EventArgs e)
         {
+            canGeneticTrain = false;
+            canHillTrain = false;
+            OpenFileDialog fileDir = new OpenFileDialog();
+            DialogResult response = fileDir.ShowDialog();
 
 
+            if (response == DialogResult.OK || response == DialogResult.Yes)
+            {
+                picture.Image = new Bitmap(fileDir.FileName);
+                if (picture.Image == null)
+                {
+                    picture.Image = backUpImage;
+                }
+
+            }
+
+
+            Graphics gfx = Graphics.FromImage(picture.Image);
+
+            geneticRandom = new Random();
+            hillRandom = new Random();
+            geneticScore = double.MaxValue;
+            hillScore = double.MaxValue;
+            trainer = new GeneticArtTrainer(picture.Image, maxTriangles, populationSize, geneticRandom);
+            trainerMod = new ArtTrainer(picture.Image, maxTriangles, hillRandom);
+            canHillTrain = true;
+            canGeneticTrain = true;
         }
 
         private void textBox1_TextChanged(object sender, EventArgs e)
