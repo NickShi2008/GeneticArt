@@ -15,6 +15,8 @@ namespace GeneticArt
         bool canGeneticTrain = false;
         bool canHillTrain = false;
 
+        bool isRunning = true;
+
         double geneticScore = double.MaxValue;
         double hillScore = double.MaxValue; 
         private readonly object geneticLock = new object();
@@ -67,6 +69,7 @@ namespace GeneticArt
         {
             canGeneticTrain = false;
             canHillTrain = false;
+
             OpenFileDialog fileDir = new OpenFileDialog();
             DialogResult response = fileDir.ShowDialog();
 
@@ -79,9 +82,10 @@ namespace GeneticArt
                     picture.Image = backUpImage;
                 }
 
+                
             }
-
-
+           
+            picture.Image = ResizeImage(picture.Image, 750, 560);
             Graphics gfx = Graphics.FromImage(picture.Image);
 
             geneticRandom = new Random();
@@ -92,6 +96,16 @@ namespace GeneticArt
             trainerMod = new ArtTrainer(picture.Image, maxTriangles, hillRandom);
             canHillTrain = true;
             canGeneticTrain = true;
+        }
+
+        Bitmap ResizeImage(Image image, int maxWidth, int maxHeight)
+        {
+            double scale = Math.Min((double)maxWidth / image.Width,(double)maxHeight / image.Height);
+
+            int w = (int)(image.Width * scale);
+            int h = (int)(image.Height * scale);
+
+            return new Bitmap(image, new Size(w, h));
         }
 
         private void textBox1_TextChanged(object sender, EventArgs e)
@@ -143,7 +157,11 @@ namespace GeneticArt
                 }
 
                 lock (geneticLock)
+                {
+                    isRunning = true;
                     geneticScore = trainer.Train(geneticRandom);
+                    isRunning = false;
+                }
 
                 BeginInvoke(() =>
                 {
@@ -179,8 +197,12 @@ namespace GeneticArt
                     continue;
                 }
 
-                lock(hillLock)
-                    hillScore = trainerMod.Train(hillRandom)/ (picture.Image.Width * picture.Image.Height);
+                lock (hillLock)
+                {
+                    isRunning = true;
+                    hillScore = trainerMod.Train(hillRandom) / (picture.Image.Width * picture.Image.Height);
+                    isRunning = false;
+                }
 
                 BeginInvoke(() =>
                 {
@@ -188,6 +210,8 @@ namespace GeneticArt
                     HillErrorText.Text = $"Hill Error: {hillScore.ToString("F0")}";
                 }
                 );
+
+
                 if (++count % 100 == 0)
                 {
                     Bitmap snapshot;
